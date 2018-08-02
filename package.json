@@ -3,7 +3,7 @@
   "private": false,
   "version": "0.1.4",
   "description": "Opinionated micro-ORM for postgres",
-  "main": "index.js",
+  "main": "dist/index.js",
   "repository": "https://github.com/futurematik/pgdb",
   "author": "Gordon Leigh <gordon.leigh@futurematik.co.uk>",
   "license": "MIT",
