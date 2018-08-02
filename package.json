@@ -1,0 +1,36 @@
+{
+  "name": "@fmtk/pgdb",
+  "private": false,
+  "version": "0.1.2",
+  "description": "Opinionated micro-ORM for postgres",
+  "main": "index.js",
+  "repository": "https://github.com/futurematik/pgdatabase",
+  "author": "Gordon Leigh <gordon.leigh@futurematik.co.uk>",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^3.1.0",
+    "lodash": "^4.17.10",
+    "pg": "^7.4.3"
+  },
+  "devDependencies": {
+    "@types/debug": "^0.0.30",
+    "@types/lodash": "^4.14.115",
+    "@types/pg": "^7.4.10",
+    "tslint": "^5.11.0",
+    "typescript": "^3.0.1"
+  },
+  "scripts": {
+    "build": "npm run lint && tsc",
+    "lint": "tslint --project .",
+    "prepare": "npm run build"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "yarn.lock"
+  ],
+  "engines": {
+    "node": ">=6.4.0"
+  }
+}
