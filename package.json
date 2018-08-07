@@ -24,12 +24,6 @@
     "lint": "tslint --project .",
     "prepare": "npm run build"
   },
-  "files": [
-    "dist/",
-    "README.md",
-    "LICENSE",
-    "yarn.lock"
-  ],
   "engines": {
     "node": ">=6.4.0"
   }

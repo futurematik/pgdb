@@ -23,11 +23,13 @@ export interface ConnectionConfig {
  * - empty: the migration table doesn't exist
  * - needsUpgrade: the database exists but there are outstanding migrations
  * - upToDate: all migrations have been applied
+ * - newerVersion: the database holds more migrations than I know about.
  */
 export enum DatabaseStatus {
   Empty = 'empty',
   NeedsUpgrade = 'needsUpgrade',
   UpToDate = 'upToDate',
+  NewerVersion = 'newerVersion',
 }
 
 /**
@@ -100,22 +102,38 @@ export default class Database {
     await this.ensureMigrationsTable();
 
     // get applied migrations
-    const results = await this.connection.query<{ id: number }>(
-      `SELECT id FROM ${this.getMigrationTableName()} ORDER BY id ASC`,
+    const appliedMigrations = await this.connection.query<MigrationRecord>(
+      `SELECT * FROM ${this.getMigrationTableName()} ORDER BY id ASC`,
     );
-    const appliedMigrations = results.map(x => x.id);
 
     // sense check existing migrations
-    for (let i = 0; i < this.migrations.length; ++i) {
-      if (i < appliedMigrations.length) {
-        if (appliedMigrations[i] != i + 1) {
+    for (let i = 0; i < appliedMigrations.length; ++i) {
+      if (appliedMigrations[i].id != i + 1) {
+        throw new Error(
+          `expected applied migration ${i + 1} to have version ${i + 1}, got ${
+            appliedMigrations[i].id
+          }`,
+        );
+      }
+
+      if (i < this.migrations.length) {
+        debug(`migration ${i + 1} already applied`);
+        const hash = this.migrations[i].hash();
+
+        if (appliedMigrations[i].hash !== hash) {
           throw new Error(
-            `expected applied migration ${i + 1} to have version ${i +
-              1}, got ${appliedMigrations[i]}`,
+            `hash mismatch for migration ${appliedMigrations[i].id}: recorded ${
+              appliedMigrations[i].hash
+            }, calculated ${hash}`,
           );
         }
-        debug(`migration ${i + 1} already applied`);
+      } else {
+        debug(`migration ${i + 1} not known to me`);
       }
+    }
+
+    if (appliedMigrations.length > this.migrations.length) {
+      return DatabaseStatus.NewerVersion;
     }
 
     if (updateToLatest) {
@@ -124,17 +142,10 @@ export default class Database {
       return DatabaseStatus.UpToDate;
     }
 
-    let upToDate = true;
-
-    // check migrations
-    for (let migration of this.migrations) {
-      const applied = await this.checkMigration(migration);
-      upToDate = upToDate && applied;
-    }
-
-    const status = upToDate
-      ? DatabaseStatus.UpToDate
-      : DatabaseStatus.NeedsUpgrade;
+    const status =
+      appliedMigrations.length === this.migrations.length
+        ? DatabaseStatus.UpToDate
+        : DatabaseStatus.NeedsUpgrade;
     debug(`init status ${status}`);
     return status;
   }
@@ -286,4 +297,10 @@ function ellipsis(str: string, len: number): string {
     ret += '...';
   }
   return ret;
+}
+
+interface MigrationRecord {
+  id: number;
+  at: Date;
+  hash: string;
 }
