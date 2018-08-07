@@ -1,13 +1,7 @@
 import * as Debug from 'debug';
 import * as pg from 'pg';
 import Client, { IsolationMode } from './client';
-import {
-  convertPgError,
-  NotFoundDbError,
-  MoreThanOneDbError,
-  getDbErrorCode,
-  DbErrorCode,
-} from './errors';
+import { convertPgError, getDbErrorCode, DbErrorCode } from './errors';
 import ColumnMap from './columnMap';
 
 const debug = Debug('pgdatabase:dbclient');
@@ -54,59 +48,16 @@ export default class ConnectClient implements Client {
   }
 
   /**
-   * Make a query in the database that returns a single result.
-   * @param cmd the SQL  to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  async scalar<T>(cmd: string, values?: any[]): Promise<T> {
-    return await this.open(async client => {
-      debug(cmd);
-
-      const result = await client.query({
-        text: cmd,
-        values: values,
-        rowMode: 'array',
-      });
-
-      if (result.rows.length !== 1 || result.rows[0].length !== 1) {
-        throw new MoreThanOneDbError(result.rows.length);
-      }
-
-      return <T>result.rows[0][0];
-    });
-  }
-
-  /**
    * Run a SELECT query in the database.
+   * @param table the table to select from
+   * @param map the column map
+   * @param filter an object with values to filter by
    */
   async select<T>(
     table: string,
     map: ColumnMap<keyof T>,
     filter?: Partial<T>,
-    single?: false,
-    throwOnEmpty?: boolean,
-  ): Promise<T[]>;
-  async select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter: Partial<T> | undefined,
-    single: true,
-    throwOnEmpty?: false,
-  ): Promise<T | undefined>;
-  async select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter: Partial<T> | undefined,
-    single: true,
-    throwOnEmpty: true,
-  ): Promise<T>;
-  async select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter?: Partial<T>,
-    single?: boolean,
-    throwOnEmpty?: boolean,
-  ): Promise<T | T[] | undefined> {
+  ): Promise<T[]> {
     let sql = `SELECT ${map.aliasedColumns()} FROM ${table}`;
     let values: any[] | undefined;
 
@@ -116,59 +67,7 @@ export default class ConnectClient implements Client {
       values = filterMap.values(filter);
     }
 
-    const results = await this.query<T>(sql, values);
-
-    if (throwOnEmpty && results.length === 0) {
-      throw new NotFoundDbError();
-    }
-    if (single) {
-      if (results.length > 1) {
-        throw new MoreThanOneDbError(results.length);
-      }
-      if (results.length === 0) {
-        return;
-      }
-      return results[0];
-    }
-
-    return results;
-  }
-
-  /**
-   * Make a query in the database and throw an error if not exactly one result.
-   * @param cmd the SQL to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  async single<T>(cmd: string, values?: any[]): Promise<T> {
-    const result = await this.query(cmd, values);
-
-    if (result.length !== 1) {
-      throw new MoreThanOneDbError(result.length);
-    }
-
-    return <T>result[0];
-  }
-
-  /**
-   * Make a query in the database and throw an error if there is more than one
-   * result. This will return undefined if no result is found.
-   * @param cmd the SQL to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  async singleOrNothing<T>(
-    cmd: string,
-    values?: any[],
-  ): Promise<T | undefined> {
-    const result = await this.query(cmd, values);
-
-    if (result.length === 0) {
-      return undefined;
-    }
-    if (result.length > 1) {
-      throw new MoreThanOneDbError(result.length);
-    }
-
-    return <T>result[0];
+    return await this.query<T>(sql, values);
   }
 
   /**
@@ -229,14 +128,42 @@ export default class ConnectClient implements Client {
    * @param value the entity to upsert.
    * @param keyField the name of the field which represents the unique key.
    * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
    */
-  async update<T>(
+  update<T>(
     table: string,
     map: ColumnMap<keyof T>,
     value: T,
     keyFields: keyof T | (keyof T)[],
     updateFields?: (keyof T)[],
-  ): Promise<void> {
+    returning?: false,
+  ): Promise<void>;
+
+  /**
+   * Update a value in the database.
+   * @param table name of the table to upsert into.
+   * @param map a column map.
+   * @param value the entity to upsert.
+   * @param keyField the name of the field which represents the unique key.
+   * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
+   */
+  update<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyFields: keyof T | (keyof T)[],
+    updateFields: undefined | (keyof T)[],
+    returning: true,
+  ): Promise<T[]>;
+  async update<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyFields: keyof T | (keyof T)[],
+    updateFields: undefined | (keyof T)[],
+    returning?: boolean,
+  ): Promise<T[] | void> {
     if (!Array.isArray(keyFields)) {
       keyFields = [keyFields];
     }
@@ -249,10 +176,13 @@ export default class ConnectClient implements Client {
         ? map.omitPreserveIndices(...keyFields)
         : map.pickPreserveIndices(...updateFields);
 
-    await this.query(
+    const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+
+    return await this.query<T>(
       `UPDATE ${table}
        SET ${updateMap.assignments()}
-       WHERE ${keyMap.assignments()}`,
+       WHERE ${keyMap.assignments()}
+       ${ret}`,
       map.values(value),
     );
   }
@@ -264,25 +194,56 @@ export default class ConnectClient implements Client {
    * @param value the entity to upsert.
    * @param keyField the name of the field which represents the unique key.
    * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
    */
-  async upsert<T>(
+  upsert<T>(
     table: string,
     map: ColumnMap<keyof T>,
     value: T,
     keyField: keyof T,
     updateFields?: (keyof T)[],
-  ): Promise<void> {
+    returning?: false,
+  ): Promise<void>;
+
+  /**
+   * Insert or update a value in the database.
+   * @param table name of the table to upsert into.
+   * @param map a column map.
+   * @param value the entity to upsert.
+   * @param keyField the name of the field which represents the unique key.
+   * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
+   */
+  upsert<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyField: keyof T,
+    updateFields: undefined | (keyof T)[],
+    returning: true,
+  ): Promise<T[]>;
+  async upsert<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyField: keyof T,
+    updateFields: undefined | (keyof T)[],
+    returning?: boolean,
+  ): Promise<void | T[]> {
     // make a map for the updated fields
     const updateMap =
       updateFields === undefined
         ? map.omitPreserveIndices(keyField)
         : map.pickPreserveIndices(...updateFields);
 
-    await this.query(
+    const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+
+    return await this.query<T>(
       `INSERT INTO ${table} (${map.columns()}) 
         VALUES (${map.placeholders()})
         ON CONFLICT (${keyField})
-        DO UPDATE SET ${updateMap.assignments()}`,
+        DO UPDATE SET ${updateMap.assignments()}
+        ${ret}`,
       map.values(value),
     );
   }

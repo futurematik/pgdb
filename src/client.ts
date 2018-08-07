@@ -33,74 +33,16 @@ export default interface Client {
   query<T>(cmd: string, values?: any[]): Promise<T[]>;
 
   /**
-   * Make a query in the database and throw an error if not exactly one result.
-   * @param cmd the SQL to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  single<T>(cmd: string, values?: any[]): Promise<T>;
-
-  /**
-   * Make a query in the database and throw an error if there is more than one
-   * result. This will return undefined if no result is found.
-   * @param cmd the SQL to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  singleOrNothing<T>(cmd: string, values?: any[]): Promise<T | undefined>;
-
-  /**
-   * Make a query in the database that returns a single result.
-   * @param cmd the SQL  to execute.
-   * @param values optional values to insert into the provided SQL.
-   */
-  scalar<T>(cmd: string, values?: any[]): Promise<T>;
-
-  /**
    * Run a SELECT query in the database.
    * @param table the table to select from
    * @param map the column map
    * @param filter an object with values to filter by
-   * @param single true to return a single result and throw if more
-   * @param throwOnEmpty true to throw if no results available
    */
   select<T>(
     table: string,
     map: ColumnMap<keyof T>,
     filter?: Partial<T>,
-    single?: false,
-    throwOnEmpty?: boolean,
   ): Promise<T[]>;
-
-  /**
-   * Run a SELECT query in the database.
-   * @param table the table to select from
-   * @param map the column map
-   * @param filter an object with values to filter by
-   * @param single true to return a single result and throw if more
-   * @param throwOnEmpty true to throw if no results available
-   */
-  select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter: Partial<T> | undefined,
-    single: true,
-    throwOnEmpty?: false,
-  ): Promise<T | undefined>;
-
-  /**
-   * Run a SELECT query in the database.
-   * @param table the table to select from
-   * @param map the column map
-   * @param filter an object with values to filter by
-   * @param single true to return a single result and throw if more
-   * @param throwOnEmpty true to throw if no results available
-   */
-  select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter: Partial<T> | undefined,
-    single: true,
-    throwOnEmpty: true,
-  ): Promise<T>;
 
   /**
    * Wrap a set of queries in a transaction that will be automatically committed
@@ -120,6 +62,7 @@ export default interface Client {
    * @param value the entity to upsert.
    * @param keyField the name of the field which represents the unique key.
    * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
    */
   update<T>(
     table: string,
@@ -127,6 +70,43 @@ export default interface Client {
     value: T,
     keyFields: keyof T | (keyof T)[],
     updateFields?: (keyof T)[],
+    returning?: false,
+  ): Promise<void>;
+
+  /**
+   * Update a value in the database.
+   * @param table name of the table to upsert into.
+   * @param map a column map.
+   * @param value the entity to upsert.
+   * @param keyField the name of the field which represents the unique key.
+   * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
+   */
+  update<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyFields: keyof T | (keyof T)[],
+    updateFields: undefined | (keyof T)[],
+    returning: true,
+  ): Promise<T[]>;
+
+  /**
+   * Insert or update a value in the database.
+   * @param table name of the table to upsert into.
+   * @param map a column map.
+   * @param value the entity to upsert.
+   * @param keyField the name of the field which represents the unique key.
+   * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
+   */
+  upsert<T>(
+    table: string,
+    map: ColumnMap<keyof T>,
+    value: T,
+    keyField: keyof T,
+    updateFields?: (keyof T)[],
+    returning?: false,
   ): Promise<void>;
 
   /**
@@ -136,12 +116,14 @@ export default interface Client {
    * @param value the entity to upsert.
    * @param keyField the name of the field which represents the unique key.
    * @param updateFields the names of the fields to update (defaults to all fields except key field).
+   * @param returning true to return the updated fields.
    */
   upsert<T>(
     table: string,
     map: ColumnMap<keyof T>,
     value: T,
     keyField: keyof T,
-    updateFields?: (keyof T)[],
-  ): Promise<void>;
+    updateFields: undefined | (keyof T)[],
+    returning: true,
+  ): Promise<T[]>;
 }

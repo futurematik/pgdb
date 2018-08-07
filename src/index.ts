@@ -3,6 +3,7 @@ export { default as ColumnMap, FieldsOf } from './columnMap';
 export * from './ddl';
 export * from './errors';
 export { default as Migration } from './migration';
+export * from './util';
 
 export {
   ConnectionConfig,

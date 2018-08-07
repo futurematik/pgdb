@@ -3,6 +3,7 @@ import * as pg from 'pg';
 import Migration from './migration';
 import Client from './client';
 import ConnectClient from './connectClient';
+import { singleOrNothing, scalarOrNothing } from './util';
 
 const debug = Debug('pgdatabase:database');
 
@@ -221,9 +222,11 @@ export default class Database {
   ): Promise<boolean> {
     client = client || this.connection;
 
-    const result = await client.singleOrNothing<{ hash: string }>(
-      `SELECT hash FROM ${this.getMigrationTableName()} WHERE id = $1`,
-      [migration.version],
+    const result = singleOrNothing(
+      await client.query<{ hash: string }>(
+        `SELECT hash FROM ${this.getMigrationTableName()} WHERE id = $1`,
+        [migration.version],
+      ),
     );
     if (result === undefined) {
       return false;
@@ -258,12 +261,14 @@ export default class Database {
    * Return true if the migrations table has been created.
    */
   private async migrationTablePresent(): Promise<boolean> {
-    const result = await this.connection.scalar<number>(
-      `select (
+    const result = scalarOrNothing(
+      await this.connection.query(
+        `select (
         CASE WHEN to_regclass('${this.getMigrationTableName()}') IS NULL 
           THEN 0 
           ELSE 1 
         END) AS present`,
+      ),
     );
 
     return result === 1;
