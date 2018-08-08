@@ -24,7 +24,7 @@ export function scalar<T>(results: T[]): T {
 }
 
 export function scalarOrNothing<T>(results: T[]): T | undefined {
-  const one = scalarOrNothing(results);
+  const one = singleOrNothing(results);
   if (one === undefined) {
     return;
   }
