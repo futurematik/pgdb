@@ -23,7 +23,7 @@ export function scalar<T>(results: T[]): T {
   return <T>getFirstValue(one);
 }
 
-export function scalarOrNothing<T>(results: T[]): T | undefined {
+export function scalarOrNothing<T = any>(results: any[]): T | undefined {
   const one = singleOrNothing(results);
   if (one === undefined) {
     return;
