@@ -32,7 +32,9 @@ export function scalarOrNothing<T>(results: T[]): T | undefined {
 }
 
 function getFirstValue(obj: any) {
-  for (let v of obj) {
-    return v;
+  const k = Object.keys(obj);
+  if (!k.length) {
+    return;
   }
+  return obj[k[0]];
 }
