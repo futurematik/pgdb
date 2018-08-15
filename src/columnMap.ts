@@ -145,8 +145,8 @@ export default class ColumnMap<ModelKey extends PropertyKey> {
    * Get a map which omits listed model fields.
    */
   omit<SubModelKey extends ModelKey>(...props: SubModelKey[]) {
-    return new ColumnMap<SubModelKey>(
-      _.omit<Record<ModelKey, string>, SubModelKey>(this.definition, ...props),
+    return new ColumnMap<Exclude<ModelKey, SubModelKey>>(
+      _.omit(this.definition, ...props),
     );
   }
 
@@ -154,8 +154,8 @@ export default class ColumnMap<ModelKey extends PropertyKey> {
    * Get a map which omits listed model fields, preserving placeholder indices.
    */
   omitPreserveIndices<SubModelKey extends ModelKey>(...props: SubModelKey[]) {
-    return new ColumnMap<SubModelKey>(
-      _.omit<Record<ModelKey, string>, SubModelKey>(this.definition, ...props),
+    return new ColumnMap<Exclude<ModelKey, SubModelKey>>(
+      _.omit(this.definition, ...props),
       this.indices(),
     );
   }
