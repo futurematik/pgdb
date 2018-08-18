@@ -161,7 +161,19 @@ export default class ColumnMap<ModelKey extends PropertyKey> {
   }
 
   /**
-   * Prepend all column names with the given table.
+   * Make a map which is a combination of this map and another.
+   */
+  combine<OtherKey extends PropertyKey>(
+    other: ColumnMap<OtherKey>,
+  ): ColumnMap<OtherKey | ModelKey> {
+    return new ColumnMap({
+      ...(<any>this.definition),
+      ...(<any>other.definition),
+    });
+  }
+
+  /**
+   * Get a map that prepends all column names with the given table.
    */
   withTableName(table: string) {
     return new ColumnMap<ModelKey>(
