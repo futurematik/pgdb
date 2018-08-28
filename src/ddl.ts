@@ -10,20 +10,21 @@ export interface ColumnOptions {
   unique?: boolean;
 }
 
-export function makePrimaryKeyName(table: string, column: string) {
-  return `PK:${table}:${column}`;
+export function makePrimaryKeyName(table: string, ...columns: string[]) {
+  return `PK:${table}:${columns.join(':')}`;
 }
 
-export function makeUniqueConstraintName(table: string, column: string) {
+export function makeUniqueConstraintName(table: string, ...column: string[]) {
   return `UQ:${table}:${column}`;
 }
 
 export function makeForeignKeyName(
   table: string,
-  column: string,
+  columns: string | string[],
   target: string,
 ) {
-  return `FK:${table}:${column}:${target}`;
+  const cols = Array.isArray(columns) ? columns.join(':') : columns;
+  return `FK:${table}:${cols}:${target}`;
 }
 
 export function makeIndexName(table: string, ...columns: string[]) {
@@ -81,4 +82,27 @@ export function column(
     }
     return ddl;
   };
+}
+
+export function primaryKey(columns: string[]): TableItem {
+  return tableName =>
+    `CONSTRAINT ${makePrimaryKeyName(tableName, ...columns)}
+      PRIMARY KEY (${columns.join(',')})`;
+}
+
+export function unique(columns: string[]): TableItem {
+  return tableName =>
+    `CONSTRAINT ${makeUniqueConstraintName(tableName, ...columns)}
+      UNIQUE (${columns.join(',')})`;
+}
+
+export function foreignKey(
+  target: string,
+  columns: string[],
+  targetColumns: string[],
+): TableItem {
+  return tableName =>
+    `CONSTRAINT ${makeForeignKeyName(tableName, columns, target)}
+      FOREIGN KEY (${columns.join(',')}) 
+      REFERENCES ${target} (${targetColumns.join(',')})`;
 }
