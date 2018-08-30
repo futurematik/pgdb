@@ -86,13 +86,13 @@ export function column(
 
 export function primaryKey(columns: string[]): TableItem {
   return tableName =>
-    `CONSTRAINT ${makePrimaryKeyName(tableName, ...columns)}
+    `CONSTRAINT "${makePrimaryKeyName(tableName, ...columns)}"
       PRIMARY KEY (${columns.join(',')})`;
 }
 
 export function unique(columns: string[]): TableItem {
   return tableName =>
-    `CONSTRAINT ${makeUniqueConstraintName(tableName, ...columns)}
+    `CONSTRAINT "${makeUniqueConstraintName(tableName, ...columns)}"
       UNIQUE (${columns.join(',')})`;
 }
 
@@ -102,7 +102,7 @@ export function foreignKey(
   targetColumns: string[],
 ): TableItem {
   return tableName =>
-    `CONSTRAINT ${makeForeignKeyName(tableName, columns, target)}
+    `CONSTRAINT "${makeForeignKeyName(tableName, columns, target)}"
       FOREIGN KEY (${columns.join(',')}) 
       REFERENCES ${target} (${targetColumns.join(',')})`;
 }
