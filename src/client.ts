@@ -19,10 +19,10 @@ export default interface Client {
    * @param map a column map.
    * @param value the entity to insert.
    */
-  insert<T extends string>(
+  insert<T>(
     table: string,
-    map: ColumnMap<T>,
-    value: Partial<Record<T, any>>,
+    map: ColumnMap<keyof T>,
+    value: Partial<T>,
   ): Promise<void>;
 
   /**
