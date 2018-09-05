@@ -20,7 +20,8 @@
     "typescript": "^3.0.1"
   },
   "scripts": {
-    "build": "npm run lint && tsc",
+    "build": "npm run clean && npm run lint && tsc",
+    "clean": "rm -rf dist/",
     "lint": "tslint --project .",
     "prepare": "npm run build"
   },
