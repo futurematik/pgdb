@@ -112,9 +112,33 @@ export function insert<T>(
   table: string,
   map: ColumnMap<keyof T>,
   value: T,
-): Query<T> {
+  returning: true,
+): Query<T>;
+
+/**
+ * Construct an insert statement.
+ * @param table name of the table to insert into.
+ * @param map a column map.
+ * @param value the entity to insert.
+ */
+export function insert<T>(
+  table: string,
+  map: ColumnMap<keyof T>,
+  value: T,
+  returning?: false,
+): Query<void>;
+
+export function insert<T>(
+  table: string,
+  map: ColumnMap<keyof T>,
+  value: T,
+  returning?: boolean,
+): Query<void> {
+  const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+
   return {
-    query: `INSERT INTO ${table} (${map.columns()}) VALUES(${map.placeholders()})`,
+    query: `INSERT INTO ${table} (${map.columns()}) 
+            VALUES(${map.placeholders()}) ${ret}`,
     values: map.values(value),
   };
 }
