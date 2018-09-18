@@ -5,12 +5,12 @@ export type PropertyMapKey = keyof any;
 /**
  * Shorthand to define a property map without specifying indices.
  */
-export type PropertyMapDefinition<T> = { [Field in keyof T]: string };
+export type PropertyMapDefinition<T> = { [Prop in keyof T]: string };
 
 /**
  * A full property map definition.
  */
-export type PropertyMap<T> = { [Field in keyof T]: PropertyMapItem<Field> };
+export type PropertyMap<T> = { [Prop in keyof T]: PropertyMapItem<Prop> };
 
 /**
  * An item in a property map.
@@ -20,6 +20,11 @@ export interface PropertyMapItem<TPropertyKey = PropertyMapKey> {
   property: TPropertyKey;
   index: number;
 }
+
+/**
+ * Get the property keys of the map.
+ */
+export type PropsOf<T> = T extends PropertyMap<T> ? keyof T : never;
 
 /**
  * Create a property map from the given definition.
@@ -70,7 +75,7 @@ export function omitProperties<T, TOmitProperties extends keyof T>(
 }
 
 /**
- * Create a property map by omitting fields from another field map.
+ * Create a property map by omitting properties from another property map.
  */
 export function omitPropertiesPreserveIndices<
   T,
@@ -87,10 +92,10 @@ export function omitPropertiesPreserveIndices<
  */
 export function pickProperties<T, TPickProperties extends keyof T>(
   map: PropertyMap<T>,
-  pickFields: TPickProperties[],
+  pickProperties: TPickProperties[],
   preserveIndices?: boolean,
 ): PropertyMap<Pick<T, TPickProperties>> {
-  const newMap = pickPropertiesPreserveIndices(map, pickFields);
+  const newMap = pickPropertiesPreserveIndices(map, pickProperties);
   if (preserveIndices) {
     return newMap;
   }
@@ -104,7 +109,7 @@ export function pickProperties<T, TPickProperties extends keyof T>(
 }
 
 /**
- * Create a field map by omitting properties from another field map.
+ * Create a property map by omitting properties from another property map.
  */
 export function pickPropertiesPreserveIndices<
   T,
