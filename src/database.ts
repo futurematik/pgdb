@@ -36,7 +36,7 @@ export enum DatabaseStatus {
 /**
  * Database class manages access to the database.
  */
-export default class Database {
+export class Database {
   private pool?: pg.Pool;
   private client?: Client;
   private config?: ConnectionConfig;
