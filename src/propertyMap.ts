@@ -1,4 +1,5 @@
 import * as _ from 'lodash';
+import { column } from './ddl';
 
 export type PropertyMapKey = keyof any;
 
@@ -51,6 +52,22 @@ export function propertyMapItems<T>(
   map: PropertyMap<T>,
 ): PropertyMapItem<keyof T>[] {
   return _.values(map);
+}
+
+/**
+ * Add a table name to the column names of the map.
+ */
+export function withTableName<T>(
+  map: PropertyMap<T>,
+  tableName: string,
+): PropertyMap<T> {
+  return propertyMap(
+    propertyMapItems(map).map(x => ({
+      property: x.property,
+      index: x.index,
+      column: `"${tableName}"."${x.column}"`,
+    })),
+  );
 }
 
 /**
