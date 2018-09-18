@@ -1,8 +1,8 @@
 import * as Debug from 'debug';
 import * as pg from 'pg';
-import Client, { IsolationMode } from './client';
+import { Client, IsolationMode } from './client';
 import { convertPgError, getDbErrorCode, DbErrorCode } from './errors';
-import ColumnMap from './columnMap';
+import { Query } from './query';
 
 const debug = Debug('pgdatabase:dbclient');
 const deadlockRetries = 10;
@@ -11,63 +11,43 @@ const deadlockRetryDelayMs = 10;
 /**
  * Client provides methods to query the database.
  */
-export default class ConnectClient implements Client {
+export class ConnectClient implements Client {
   constructor(
     private connect: () => Promise<pg.ClientBase>,
     private release?: (client: pg.ClientBase) => void,
   ) {}
 
   /**
-   * Insert a value into the database.
-   * @param table name of the table to insert into.
-   * @param map a column map.
-   * @param value the entity to insert.
+   * Make a query in the database.
+   * @param query the SQL to execute.
+   * @param values optional values to insert into the provided SQL.
    */
-  async insert<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-  ): Promise<void> {
-    await this.query(
-      `INSERT INTO ${table} (${map.columns()}) VALUES(${map.placeholders()})`,
-      map.values(value),
-    );
-  }
+  async query<T>(query: string, values?: any[]): Promise<T[]>;
+
+  /**
+   * Make a query in the database.
+   * @param query the SQL to execute.
+   * @param values optional values to insert into the provided SQL.
+   */
+  async query<T>(query: Query<T>): Promise<T[]>;
 
   /**
    * Make a query in the database.
    * @param cmd the SQL to execute.
    * @param values optional values to insert into the provided SQL.
    */
-  async query<T>(cmd: string, values?: any[]): Promise<T[]> {
+  async query<T>(query: string | Query<T>, values?: any[]): Promise<T[]> {
     return await this.open(async client => {
-      debug(cmd);
-      const result = await client.query(cmd, values);
+      if (typeof query === 'string') {
+        query = {
+          query: query,
+          values: values,
+        };
+      }
+      debug(query.query);
+      const result = await client.query(query.query, query.values);
       return result.rows;
     });
-  }
-
-  /**
-   * Run a SELECT query in the database.
-   * @param table the table to select from
-   * @param map the column map
-   * @param filter an object with values to filter by
-   */
-  async select<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    filter?: Partial<T>,
-  ): Promise<T[]> {
-    let sql = `SELECT ${map.aliasedColumns()} FROM ${table}`;
-    let values: any[] | undefined;
-
-    if (filter) {
-      const filterMap = map.pick(...(<(keyof T)[]>Object.keys(filter)));
-      sql += ' WHERE ' + filterMap.assignments();
-      values = filterMap.values(filter);
-    }
-
-    return await this.query<T>(sql, values);
   }
 
   /**
@@ -119,133 +99,6 @@ export default class ConnectClient implements Client {
         }
       }
     });
-  }
-
-  /**
-   * Update a value in the database.
-   * @param table name of the table to upsert into.
-   * @param map a column map.
-   * @param value the entity to upsert.
-   * @param keyField the name of the field which represents the unique key.
-   * @param updateFields the names of the fields to update (defaults to all fields except key field).
-   * @param returning true to return the updated fields.
-   */
-  update<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyFields: keyof T | (keyof T)[],
-    updateFields?: (keyof T)[],
-    returning?: false,
-  ): Promise<void>;
-
-  /**
-   * Update a value in the database.
-   * @param table name of the table to upsert into.
-   * @param map a column map.
-   * @param value the entity to upsert.
-   * @param keyField the name of the field which represents the unique key.
-   * @param updateFields the names of the fields to update (defaults to all fields except key field).
-   * @param returning true to return the updated fields.
-   */
-  update<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyFields: keyof T | (keyof T)[],
-    updateFields: undefined | (keyof T)[],
-    returning: true,
-  ): Promise<T[]>;
-  async update<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyFields: keyof T | (keyof T)[],
-    updateFields: undefined | (keyof T)[],
-    returning?: boolean,
-  ): Promise<T[] | void> {
-    if (!Array.isArray(keyFields)) {
-      keyFields = [keyFields];
-    }
-    // make a map for the keys
-    const keyMap = map.pickPreserveIndices(...keyFields);
-
-    // make a map for the updated fields
-    const updateMap =
-      updateFields === undefined
-        ? map.omitPreserveIndices(...keyFields)
-        : map.pickPreserveIndices(...updateFields);
-
-    const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
-
-    return await this.query<T>(
-      `UPDATE ${table}
-       SET ${updateMap.assignments()}
-       WHERE ${keyMap.assignments()}
-       ${ret}`,
-      map.values(value),
-    );
-  }
-
-  /**
-   * Insert or update a value in the database.
-   * @param table name of the table to upsert into.
-   * @param map a column map.
-   * @param value the entity to upsert.
-   * @param keyField the name of the field which represents the unique key.
-   * @param updateFields the names of the fields to update (defaults to all fields except key field).
-   * @param returning true to return the updated fields.
-   */
-  upsert<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyField: keyof T,
-    updateFields?: (keyof T)[],
-    returning?: false,
-  ): Promise<void>;
-
-  /**
-   * Insert or update a value in the database.
-   * @param table name of the table to upsert into.
-   * @param map a column map.
-   * @param value the entity to upsert.
-   * @param keyField the name of the field which represents the unique key.
-   * @param updateFields the names of the fields to update (defaults to all fields except key field).
-   * @param returning true to return the updated fields.
-   */
-  upsert<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyField: keyof T,
-    updateFields: undefined | (keyof T)[],
-    returning: true,
-  ): Promise<T[]>;
-  async upsert<T>(
-    table: string,
-    map: ColumnMap<keyof T>,
-    value: T,
-    keyField: keyof T,
-    updateFields: undefined | (keyof T)[],
-    returning?: boolean,
-  ): Promise<void | T[]> {
-    // make a map for the updated fields
-    const updateMap =
-      updateFields === undefined
-        ? map.omitPreserveIndices(keyField)
-        : map.pickPreserveIndices(...updateFields);
-
-    const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
-
-    return await this.query<T>(
-      `INSERT INTO ${table} (${map.columns()}) 
-        VALUES (${map.placeholders()})
-        ON CONFLICT (${keyField})
-        DO UPDATE SET ${updateMap.assignments()}
-        ${ret}`,
-      map.values(value),
-    );
   }
 
   /**
