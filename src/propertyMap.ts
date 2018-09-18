@@ -1,5 +1,4 @@
 import * as _ from 'lodash';
-import { column } from './ddl';
 
 export type PropertyMapKey = keyof any;
 
