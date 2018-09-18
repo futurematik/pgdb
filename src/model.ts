@@ -15,3 +15,13 @@ export function type<T>(): TypePlaceholder<T> {
 export function model<T>(def: ModelType<T>): ModelType<T> {
   return def;
 }
+
+export function extendModel<B, T>(
+  base: ModelType<B>,
+  ext: ModelType<T>,
+): ModelType<B & T> {
+  return {
+    ...(<any>base),
+    ...(<any>ext),
+  };
+}
