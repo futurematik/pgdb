@@ -1,8 +1,8 @@
 import * as Debug from 'debug';
 import * as pg from 'pg';
-import Migration from './migration';
-import Client from './client';
-import ConnectClient from './connectClient';
+import { Migration } from './migration';
+import { Client } from './client';
+import { ConnectClient } from './connectClient';
 import { singleOrNothing, scalarOrNothing } from './query';
 
 const debug = Debug('pgdatabase:database');

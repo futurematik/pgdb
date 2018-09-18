@@ -1,6 +1,6 @@
 import * as Debug from 'debug';
 import * as pg from 'pg';
-import Client, { IsolationMode } from './client';
+import { Client, IsolationMode } from './client';
 import { convertPgError, getDbErrorCode, DbErrorCode } from './errors';
 import { Query } from './query';
 
@@ -11,7 +11,7 @@ const deadlockRetryDelayMs = 10;
 /**
  * Client provides methods to query the database.
  */
-export default class ConnectClient implements Client {
+export class ConnectClient implements Client {
   constructor(
     private connect: () => Promise<pg.ClientBase>,
     private release?: (client: pg.ClientBase) => void,

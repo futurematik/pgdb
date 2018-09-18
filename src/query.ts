@@ -1,5 +1,15 @@
+import * as _ from 'lodash';
 import { MoreThanOneDbError, NotFoundDbError } from './errors';
-import ColumnMap from './columnMap';
+import {
+  PropertyMap,
+  aliasedColumns,
+  pickProperties,
+  assignments,
+  mapValues,
+  omitProperties,
+  columnList,
+  placeholders,
+} from './propertyMap';
 
 /**
  * Query represents a command and values to be inserted.
@@ -17,16 +27,16 @@ export interface Query<T> {
  */
 export function select<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   filter?: Partial<T>,
 ): Query<T> {
-  let query = `SELECT ${map.aliasedColumns()} FROM ${table}`;
+  let query = `SELECT ${aliasedColumns(map)} FROM ${table}`;
   let values: any[] | undefined;
 
   if (filter) {
-    const filterMap = map.pick(...(<(keyof T)[]>Object.keys(filter)));
-    query += ' WHERE ' + filterMap.assignments();
-    values = filterMap.values(filter);
+    const filterMap = pickProperties(map, <(keyof T)[]>Object.keys(filter));
+    query += ' WHERE ' + assignments(filterMap);
+    values = mapValues(filterMap as PropertyMap<Partial<T>>, filter);
   }
 
   return { query, values };
@@ -43,7 +53,7 @@ export function select<T>(
  */
 export function update<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyFields: keyof T | (keyof T)[],
   updateFields?: (keyof T)[],
@@ -61,7 +71,7 @@ export function update<T>(
  */
 export function update<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyFields: keyof T | (keyof T)[],
   updateFields: undefined | (keyof T)[],
@@ -73,7 +83,7 @@ export function update<T>(
  */
 export function update<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyFields: keyof T | (keyof T)[],
   updateFields: undefined | (keyof T)[],
@@ -83,22 +93,22 @@ export function update<T>(
     keyFields = [keyFields];
   }
   // make a map for the keys
-  const keyMap = map.pickPreserveIndices(...keyFields);
+  const keyMap = pickProperties(map, keyFields, true);
 
   // make a map for the updated fields
   const updateMap =
     updateFields === undefined
-      ? map.omitPreserveIndices(...keyFields)
-      : map.pickPreserveIndices(...updateFields);
+      ? omitProperties(map, keyFields, true)
+      : pickProperties(map, updateFields, true);
 
-  const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+  const ret = returning ? `RETURNING ${aliasedColumns(map)}` : '';
 
   return {
     query: `UPDATE ${table}
-      SET ${updateMap.assignments()}
-      WHERE ${keyMap.assignments()}
+      SET ${assignments(updateMap)}
+      WHERE ${assignments(keyMap)}
       ${ret}`,
-    values: map.values(value),
+    values: mapValues(map, value),
   };
 }
 
@@ -110,7 +120,7 @@ export function update<T>(
  */
 export function insert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   returning: true,
 ): Query<T>;
@@ -123,23 +133,23 @@ export function insert<T>(
  */
 export function insert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   returning?: false,
 ): Query<void>;
 
 export function insert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   returning?: boolean,
 ): Query<void> {
-  const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+  const ret = returning ? `RETURNING ${aliasedColumns(map)}` : '';
 
   return {
-    query: `INSERT INTO ${table} (${map.columns()}) 
-            VALUES(${map.placeholders()}) ${ret}`,
-    values: map.values(value),
+    query: `INSERT INTO ${table} (${columnList(map)}) 
+            VALUES(${placeholders(map)}) ${ret}`,
+    values: mapValues(map, value),
   };
 }
 
@@ -154,7 +164,7 @@ export function insert<T>(
  */
 export function upsert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyField: keyof T,
   updateFields?: (keyof T)[],
@@ -172,7 +182,7 @@ export function upsert<T>(
  */
 export function upsert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyField: keyof T,
   updateFields: undefined | (keyof T)[],
@@ -184,7 +194,7 @@ export function upsert<T>(
  */
 export function upsert<T>(
   table: string,
-  map: ColumnMap<keyof T>,
+  map: PropertyMap<T>,
   value: T,
   keyField: keyof T,
   updateFields: undefined | (keyof T)[],
@@ -193,18 +203,18 @@ export function upsert<T>(
   // make a map for the updated fields
   const updateMap =
     updateFields === undefined
-      ? map.omitPreserveIndices(keyField)
-      : map.pickPreserveIndices(...updateFields);
+      ? omitProperties(map, [keyField], true)
+      : pickProperties(map, updateFields, true);
 
-  const ret = returning ? `RETURNING ${map.aliasedColumns()}` : '';
+  const ret = returning ? `RETURNING ${aliasedColumns(map)}` : '';
 
   return {
-    query: `INSERT INTO ${table} (${map.columns()}) 
-      VALUES (${map.placeholders()})
+    query: `INSERT INTO ${table} (${columnList(map)}) 
+      VALUES (${placeholders(map)})
       ON CONFLICT (${keyField})
-      DO UPDATE SET ${updateMap.assignments()}
+      DO UPDATE SET ${assignments(updateMap)}
       ${ret}`,
-    values: map.values(value),
+    values: mapValues(map, value),
   };
 }
 

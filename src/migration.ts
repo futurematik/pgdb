@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 
-export default class Migration {
+export class Migration {
   constructor(public version: number, public statements: string[]) {}
 
   /**

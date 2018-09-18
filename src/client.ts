@@ -12,7 +12,7 @@ export enum IsolationMode {
   ReadUncomitted = 'READ UNCOMITTED',
 }
 
-export default interface Client {
+export interface Client {
   /**
    * Make a query in the database.
    * @param query the SQL to execute.
