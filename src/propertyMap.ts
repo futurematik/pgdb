@@ -5,12 +5,12 @@ export type PropertyMapKey = keyof any;
 /**
  * Shorthand to define a property map without specifying indices.
  */
-export type PropertyMapDefinition<T> = { [Prop in keyof T]: string };
+export type PropertyMapDefinition<T> = { [Prop in keyof T]-?: string };
 
 /**
  * A full property map definition.
  */
-export type PropertyMap<T> = { [Prop in keyof T]: PropertyMapItem<Prop> };
+export type PropertyMap<T> = { [Prop in keyof T]-?: PropertyMapItem<Prop> };
 
 /**
  * An item in a property map.
@@ -22,9 +22,16 @@ export interface PropertyMapItem<TPropertyKey = PropertyMapKey> {
 }
 
 /**
- * Get the property keys of the map.
+ * Get the type of the property keys of the map.
  */
 export type PropsOf<T> = T extends PropertyMap<T> ? keyof T : never;
+
+/**
+ * Get the property keys of the map.
+ */
+export function propsOf<T>(map: PropertyMap<T>): PropsOf<T>[] {
+  return Object.keys(map) as any;
+}
 
 /**
  * Create a property map from the given definition.
