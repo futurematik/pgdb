@@ -4,6 +4,7 @@ import {
   fromCamelCase,
   toSnakeCase,
   toCamelCase,
+  snakeCaseMap,
 } from './conventions';
 
 describe('fromSnakeCase', () => {
@@ -59,5 +60,32 @@ describe('toCamelCase', () => {
     const words = ['some', 'thing', 'here'];
     const result = toCamelCase(words, true);
     expect(result).toBe('SomeThingHere');
+  });
+});
+
+interface Model {
+  columnOne: number;
+  columnTwo: number;
+  columnThree: number;
+}
+
+describe('snakeCaseMap', () => {
+  it('creates a map from the properties', () => {
+    const keys: (keyof Model)[] = ['columnOne', 'columnTwo', 'columnThree'];
+    const result = snakeCaseMap<Model>(keys);
+
+    expect(Object.keys(result)).toHaveLength(3);
+
+    expect(result.columnOne.property).toEqual('columnOne');
+    expect(result.columnOne.column).toEqual('column_one');
+    expect(result.columnOne.index).toEqual(0);
+
+    expect(result.columnTwo.property).toEqual('columnTwo');
+    expect(result.columnTwo.column).toEqual('column_two');
+    expect(result.columnTwo.index).toEqual(1);
+
+    expect(result.columnThree.property).toEqual('columnThree');
+    expect(result.columnThree.column).toEqual('column_three');
+    expect(result.columnThree.index).toEqual(2);
   });
 });

@@ -1,4 +1,4 @@
-import { PropertyMap } from './propertyMap';
+import { PropertyMap, propertyMap } from './propertyMap';
 
 export function fromSnakeCase(id: string) {
   return id.split('_').map(x => x.toLowerCase());
@@ -31,11 +31,13 @@ export function snakeCaseMap<T>(def: T | (keyof T)[]): PropertyMap<T> {
   if (!Array.isArray(def)) {
     def = Object.keys(def) as (keyof T)[];
   }
-  return def.reduce(
-    (a, x: keyof T) => ({
-      ...a,
-      [x]: camelToSnake(x.toString()),
-    }),
-    {} as any,
+  return propertyMap(
+    def.reduce(
+      (a, x: keyof T) => ({
+        ...a,
+        [x]: camelToSnake(x.toString()),
+      }),
+      {} as any,
+    ),
   );
 }

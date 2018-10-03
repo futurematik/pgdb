@@ -148,7 +148,7 @@ export function insert<T>(
 
   return {
     query: `INSERT INTO ${table} (${columnList(map)}) 
-            VALUES(${placeholders(map)}) ${ret}`,
+            VALUES (${placeholders(map)}) ${ret}`,
     values: mapValues(map, value),
   };
 }

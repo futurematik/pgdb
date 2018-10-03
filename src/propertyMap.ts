@@ -57,7 +57,9 @@ export function propertyMap<T>(
 export function propertyMapItems<T>(
   map: PropertyMap<T>,
 ): PropertyMapItem<keyof T>[] {
-  return _.values(map);
+  return (_.values(map) as PropertyMapItem<keyof T>[]).sort(
+    (a, b) => a.index - b.index,
+  );
 }
 
 /**
@@ -167,7 +169,7 @@ export function aliasedColumns<T>(map: PropertyMap<T>): string {
  */
 export function assignments<T>(map: PropertyMap<T>): string {
   return propertyMapItems(map)
-    .map(x => `${x.column} = $${x.index}`)
+    .map(x => `${x.column} = $${x.index + 1}`)
     .join(',');
 }
 
@@ -176,7 +178,7 @@ export function assignments<T>(map: PropertyMap<T>): string {
  */
 export function placeholders<T>(map: PropertyMap<T>): string {
   return propertyMapItems(map)
-    .map(x => `$${x.index}`)
+    .map(x => `$${x.index + 1}`)
     .join(',');
 }
 
