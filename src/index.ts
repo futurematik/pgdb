@@ -4,7 +4,6 @@ export * from './propertyMap';
 export * from './ddl';
 export * from './errors';
 export * from './migration';
-export * from './model';
 export * from './query';
 
 export * from './database';
