@@ -23,10 +23,14 @@
     "typescript": "^3.0.1"
   },
   "scripts": {
-    "build": "npm run clean && npm run lint && npm run test && tsc",
+    "build": "npm run clean && npm run lint && tsc",
+    "bump": "npm version minor && npm publish",
+    "bumpfix": "npm version patch && npm publish",
     "clean": "rm -rf dist/",
     "lint": "tslint --project .",
+    "postversion": "git push --follow-tags",
     "prepare": "npm run build",
+    "preversion": "npm run build",
     "test": "jest"
   },
   "engines": {
