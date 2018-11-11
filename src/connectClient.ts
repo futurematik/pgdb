@@ -44,7 +44,7 @@ export class ConnectClient implements Client {
           values: values,
         };
       }
-      debug(query.query);
+      debug('%O', query);
       const result = await client.query(query.query, query.values);
       return result.rows;
     });
