@@ -35,7 +35,7 @@ export function select<T>(
 
   if (filter) {
     const filterMap = pickProperties(map, <(keyof T)[]>Object.keys(filter));
-    query += ' WHERE ' + assignments(filterMap);
+    query += ' WHERE ' + assignments(filterMap, 'AND');
     values = mapValues(filterMap as PropertyMap<Partial<T>>, filter);
   }
 

@@ -167,10 +167,24 @@ export function aliasedColumns<T>(map: PropertyMap<T>): string {
 /**
  * Return a comma-separated list of column to placeholder assignments.
  */
-export function assignments<T>(map: PropertyMap<T>): string {
-  return propertyMapItems(map)
-    .map(x => `${x.column} = $${x.index + 1}`)
-    .join(',');
+export function assignments<T>(map: PropertyMap<T>, seperator?: string): string;
+/**
+ * Return a comma-separated list of column to placeholder assignments.
+ */
+export function assignments<T>(map: PropertyMap<T>, seperator: false): string[];
+/**
+ * Return a comma-separated list of column to placeholder assignments.
+ */
+export function assignments<T>(
+  map: PropertyMap<T>,
+  seperator?: string | false,
+): string | string[] {
+  const v = propertyMapItems(map).map(x => `${x.column} = $${x.index + 1}`);
+
+  if (seperator === false) {
+    return v;
+  }
+  return v.join(seperator ? ` ${seperator} ` : ', ');
 }
 
 /**
