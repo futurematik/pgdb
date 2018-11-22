@@ -108,7 +108,7 @@ export function update<T>(
       SET ${assignments(updateMap)}
       WHERE ${assignments(keyMap)}
       ${ret}`,
-    values: mapValues(map, value),
+    values: mapValues({ ...(keyMap as any), ...(updateMap as any) }, value),
   };
 }
 
